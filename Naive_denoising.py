@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 from numpy import linalg as LA
 from scipy import optimize
 from scipy.optimize import minimize
+import random
 
+
+# y = Gu(x) + noise
 def Gu(x):
 	return ((x >= 1 / 3.0) & (x < 2 / 3.0)) * 1
 
@@ -27,29 +30,39 @@ class Naive_denoising(object):
 		plt.plot(self.x_ordinate, self.observation, 'x')
 		plt.show()
 
+
+	def TV_norm(self, u):
+		return self.Lambda * LA.norm(
+			np.delete((u),0) - np.delete(u, self.dimension_of_observation - 1), 1) / self.dimension_of_observation
+
+	def Phi(self, u):
+		return LA.norm((u - self.observation) / sqrt(self.noise_variance))**2
+
 	def TV_minimizer(self, u):
 		return LA.norm((u - self.observation) / sqrt(self.noise_variance))**2 + self.Lambda * LA.norm(
 			np.delete((u),0) - np.delete(u, self.dimension_of_observation - 1), 1) / self.dimension_of_observation
 
 	def Gaussian_minimizer(self, u):
 		return LA.norm((u - self.observation) / sqrt(self.noise_variance))**2 + LA.norm(
-			np.dot(self.inv_sqrt_prior_covariance, u)) ** 2 / (2 * self.dimension_of_observation)
+			np.dot(self.inv_sqrt_prior_covariance, u)) ** 2 / 2
 
 	def TG_minimizer(self, u):
 		return LA.norm((u - self.observation) / sqrt(self.noise_variance))**2 + self.Lambda * LA.norm(
-			np.delete((u),0) - np.delete(u, self.dimension_of_observation - 1)) ** 2 + LA.norm(
-			np.dot(self.inv_sqrt_prior_covariance, u)) ** 2 / (2 * self.dimension_of_observation)
+			np.delete((u),0) - np.delete(u, self.dimension_of_observation - 1), 1) / self.dimension_of_observation + LA.norm(
+			np.dot(self.inv_sqrt_prior_covariance, u)) ** 2 / 2
 
-	def Get_MAP(self, method = "TV", Lambda = 1, gamma = 0.1, d = 0.04):
+	def Get_MAP(self, prior = "TV", Lambda = 1, gamma = 0.1, d = 0.04):
+		# Maximum a Posterior
 		self.Lambda = Lambda
-		if method == "TV":
+		if prior == "TV":
 			input = self.observation
 			res = minimize(self.TV_minimizer, input, method = 'L-BFGS-B', tol = 1e-6)
 			self.MAP = res.x
-			print "Loss:", LA.norm((res.x - self.observation) / sqrt(self.noise_variance))**2, self.Lambda * LA.norm(
-			np.delete((res.x),0) - np.delete(res.x, self.dimension_of_observation - 1), 1) / self.dimension_of_observation
+			print "Loss:", LA.norm((res.x - self.observation) / sqrt(self.noise_variance
+				))**2, self.Lambda * LA.norm(np.delete((res.x),0) - np.delete(res.x, 
+				self.dimension_of_observation - 1), 1) / self.dimension_of_observation
 
-		elif method == "Gaussian":
+		elif prior == "Gaussian":
 			self.prior_covariance = gaussian_kernel(self.x_ordinate[np.newaxis, :], 
 				self.x_ordinate[:, np.newaxis], gamma, d)
 			self.inv_sqrt_prior_covariance = LA.inv(np.sqrt(self.prior_covariance))
@@ -57,9 +70,9 @@ class Naive_denoising(object):
 			res = minimize(self.Gaussian_minimizer, input, method = 'L-BFGS-B', tol = 1e-6)
 			self.MAP = res.x
 			print "Loss:" ,LA.norm((res.x - self.observation) / sqrt(self.noise_variance
-				))**2 , LA.norm(np.dot(self.inv_sqrt_prior_covariance, res.x)) ** 2
+				))**2 , LA.norm(np.dot(self.inv_sqrt_prior_covariance, res.x)) ** 2 / 2
 
-		elif method == "TG":
+		elif prior == "TG":
 			self.prior_covariance = gaussian_kernel(self.x_ordinate[np.newaxis, :], 
 				self.x_ordinate[:, np.newaxis], gamma, d)
 			self.inv_sqrt_prior_covariance = LA.inv(np.sqrt(self.prior_covariance))
@@ -67,26 +80,65 @@ class Naive_denoising(object):
 			res = minimize(self.TG_minimizer, input, method = 'L-BFGS-B', tol = 1e-6)
 			self.MAP = res.x
 			print LA.norm((res.x - self.observation) / sqrt(self.noise_variance))**2, LA.norm(
-			np.delete((res.x),0) - np.delete(res.x, self.dimension_of_observation - 1)) ** 2, LA.norm(
+				np.delete((res.x),0) - np.delete(res.x, self.dimension_of_observation - 1)) ** 2, LA.norm(
 			np.dot(self.inv_sqrt_prior_covariance, res.x)) ** 2
 
 		if res.success:
-			print("Successfully get MAP from " + method + " prior.\n")
-		else:print("Unsuccessfully get MAP.")
+			print("Successfully get MAP from " + prior + " prior.\n")
+		else:
+			print("Unsuccessfully get MAP.")
 		plt.plot(self.x_ordinate, self.observation, 'x')
 		plt.plot(self.x_ordinate, self.MAP)
-		plt.title(method+" prior")
+		plt.title(method + " prior")
 		plt.show()
+
+	def S_pCN(self, Lambda = 1, gamma = 0.1, d = 0.04, sample_size = 1000, splitting_number = 5, beta = 0.1):
+		self.Lambda = Lambda
+		self.prior_covariance = gaussian_kernel(self.x_ordinate[np.newaxis, :], 
+				self.x_ordinate[:, np.newaxis], gamma, d)
+
+		u_samples = list()
+		u_samples.append(np.zeros(self.dimension_of_observation))
+		u_mean = np.zeros(self.dimension_of_observation)
+		for i in range(sample_size):
+			u_mean += u_samples[-1]
+			if i % (sample_size / 100) == 0:
+				print((i+0.0) / sample_size)
+			u_current = u_samples[-1]
+			vi = u_current
+			for j in range(splitting_number):
+				random_walk = np.random.multivariate_normal(np.zeros(self.dimension_of_observation), self.prior_covariance)
+				v_prop = sqrt(1 - beta ** 2) * vi + beta * random_walk
+				acceptance_rate_R = min(1, e ** (self.TV_norm(vi) - self.TV_norm(v_prop)))
+				if random.uniform(0, 1) < acceptance_rate_R:
+					vi = v_prop
+
+			acceptance_rate_Phi = min(1, e ** (self.Phi(u_current) - self.Phi(vi)))
+			if random.uniform(0, 1) < acceptance_rate_Phi:
+				u_samples.append(vi)
+			else:
+				u_samples.append(u_current)
+
+		plt.plot(self.x_ordinate, self.observation, 'x')
+		plt.plot(self.x_ordinate, u_mean / sample_size)
+		plt.title("S_pCN")
+		plt.show()
+
 
 
 #############################################################################
 if __name__ == '__main__':
-	Denoising_example = Naive_denoising(dimension_of_observation = 23, noise_variance = 0.01)
-	# Denoising_example.Get_MAP(method = "TV", Lambda = 500)
+	# Denoising_example = Naive_denoising(dimension_of_observation = 23, noise_variance = 0.01)
+	# Denoising_example.Get_MAP(prior = "TV", Lambda = 500)
+	# Denoising_example.Get_MAP(prior = "TV", Lambda = 400)
+	# Denoising_example.Get_MAP(prior = "TV", Lambda = 600)
 	# for d in np.linspace(0.04, 0.4, 10):
-		# Denoising_example.Get_MAP(method = "Gaussian", d = d)
-	# Denoising_example.Get_MAP(method = "Gaussian", d = 0.05)
-	# Denoising_example.Get_MAP(method = "Gaussian", d = 0.06)
-	# Denoising_example.Get_MAP(method = "Gaussian", d = 0.07)
+	# 	Denoising_example.Get_MAP(prior = "Gaussian", d = d)
+	# Denoising_example.Get_MAP(prior = "Gaussian", d = 0.05)
+	# Denoising_example.Get_MAP(prior = "Gaussian", d = 0.06)
+	# Denoising_example.Get_MAP(prior = "Gaussian", d = 0.07)
 
-	Denoising_example.Get_MAP(method = "TG", d = 0.02)
+	Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.01)
+	Sample_example.S_pCN(Lambda = 500, gamma = 0.1, d = 0.02, sample_size = 100000, splitting_number = 5, beta = 0.1)
+
+
