@@ -32,8 +32,11 @@ class Naive_denoising(object):
 
 
 	def TV_norm(self, u):
-		return self.Lambda * LA.norm(
-			np.delete((u),0) - np.delete(u, self.dimension_of_observation - 1), 1) / self.dimension_of_observation
+		return self.Lambda * LA.norm(np.delete((u),0) - np.delete(u, 
+			self.dimension_of_observation - 1), 1) / self.dimension_of_observation
+
+	def Gaussian_norm(self, u):
+		return LA.norm(np.dot(self.inv_sqrt_prior_covariance, u)) ** 2 / 2
 
 	def Phi(self, u):
 		return LA.norm((u - self.observation) / sqrt(self.noise_variance))**2
@@ -96,26 +99,29 @@ class Naive_denoising(object):
 		self.Lambda = Lambda
 		self.prior_covariance = gaussian_kernel(self.x_ordinate[np.newaxis, :], 
 				self.x_ordinate[:, np.newaxis], gamma, d)
+		self.inv_sqrt_prior_covariance = LA.inv(np.sqrt(self.prior_covariance))
 
 		u_samples = list()
-		u_samples.append(np.zeros(self.dimension_of_observation))
+		u_samples.append(self.observation)
 		u_mean = np.zeros(self.dimension_of_observation)
+
 		for i in range(sample_size):
 			u_mean += u_samples[-1]
 			if i % (sample_size / 100) == 0:
-				print((i+0.0) / sample_size)
+				print((i + 0.0) / sample_size)
+
 			u_current = u_samples[-1]
-			vi = u_current
+			vj = u_current
 			for j in range(splitting_number):
 				random_walk = np.random.multivariate_normal(np.zeros(self.dimension_of_observation), self.prior_covariance)
-				v_prop = sqrt(1 - beta ** 2) * vi + beta * random_walk
-				acceptance_rate_R = min(1, e ** (self.TV_norm(vi) - self.TV_norm(v_prop)))
+				v_prop = sqrt(1 - beta ** 2) * vj + beta * random_walk
+				acceptance_rate_R = min(1, e ** (self.TV_norm(vj) - self.TV_norm(v_prop)))
 				if random.uniform(0, 1) < acceptance_rate_R:
-					vi = v_prop
+					vj = v_prop
 
-			acceptance_rate_Phi = min(1, e ** (self.Phi(u_current) - self.Phi(vi)))
+			acceptance_rate_Phi = min(1, e ** (self.Phi(u_current) - self.Phi(vj)))
 			if random.uniform(0, 1) < acceptance_rate_Phi:
-				u_samples.append(vi)
+				u_samples.append(vj)
 			else:
 				u_samples.append(u_current)
 
@@ -123,6 +129,36 @@ class Naive_denoising(object):
 		plt.plot(self.x_ordinate, u_mean / sample_size)
 		plt.title("S_pCN")
 		plt.show()
+
+	def Metropolis_Hastings(self, Lambda = 1, gamma = 0.1, d = 0.04, sample_size = 1000, splitting_number = 5, beta = 0.1):
+		self.Lambda = Lambda
+		# self.prior_covariance = gaussian_kernel(self.x_ordinate[np.newaxis, :], 
+		# 		self.x_ordinate[:, np.newaxis], gamma, d)
+		# self.inv_sqrt_prior_covariance = LA.inv(np.sqrt(self.prior_covariance))
+
+		u_samples = list()
+		u_samples.append(self.observation)
+		u_mean = np.zeros(self.dimension_of_observation)
+
+		for i in range(sample_size):
+			u_mean += u_samples[-1]
+			if i % (sample_size / 100) == 0:
+				print((i + 0.0) / sample_size)
+
+			u_current = u_samples[-1]
+			random_walk = np.random.multivariate_normal(np.zeros(self.dimension_of_observation), self.noise_variance * np.eye(self.dimension_of_observation))
+			u_prop = u_current + beta * random_walk
+			acceptance_rate_I = min(1, e ** (self.TV_minimizer(u_current) - self.TV_minimizer(u_prop)))
+			if random.uniform(0, 1) < acceptance_rate_I:
+				u_samples.append(u_prop)
+			else:
+				u_samples.append(u_current)
+
+		plt.plot(self.x_ordinate, self.observation, 'x')
+		plt.plot(self.x_ordinate, u_mean / sample_size)
+		plt.title("Metropolis Hastings")
+		plt.show()
+
 
 
 
@@ -138,7 +174,8 @@ if __name__ == '__main__':
 	# Denoising_example.Get_MAP(prior = "Gaussian", d = 0.06)
 	# Denoising_example.Get_MAP(prior = "Gaussian", d = 0.07)
 
-	Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.01)
-	Sample_example.S_pCN(Lambda = 500, gamma = 0.1, d = 0.02, sample_size = 100000, splitting_number = 5, beta = 0.1)
+	Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.04)
+	# Sample_example.S_pCN(Lambda = 500, gamma = 0.1, d = 0.02, sample_size = 10000, splitting_number = 5, beta = 0.1)
+	Sample_example.Metropolis_Hastings(Lambda = 500, gamma = 0.1, d = 0.02, sample_size = 1000000, splitting_number = 5, beta = 0.01)
 
 
