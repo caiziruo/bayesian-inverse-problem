@@ -103,8 +103,7 @@ class Naive_denoising(object):
 		u_samples.append(self.observation)
 		# u_mean is the mean of the samples.
 		u_mean = np.zeros(self.dimension_of_observation)
-		acc_counter = 0
-		notacc_counter = 0
+		acc_counter = 0.0
 
 		for i in range(sample_size):
 			u_mean += u_samples[-1]
@@ -124,9 +123,8 @@ class Naive_denoising(object):
 				acc_counter += 1
 			else: 
 				u_samples.append(u_current)
-				notacc_counter += 1
 
-		print("Accept:" + str(acc_counter) + ", reject:" + str(notacc_counter))
+		print("Accept:" + str(acc_counter / sample_size))
 		self.Posterior_Mean = u_mean / sample_size
 		self.Plot_CM(sample_size, beta)
 		return u_samples
@@ -135,10 +133,9 @@ class Naive_denoising(object):
 		u_samples = list()
 		u_samples.append(self.observation)
 		u_mean = np.zeros(self.dimension_of_observation)
-		acc_counter = 0
-		notacc_counter = 0
+		acc_counter = 0.0
 
-		for i in range(sample_size):
+		for i in range(sample_size): 
 			u_mean += u_samples[-1]
 			if i % (sample_size / 10) == 0: print((i + 0.0) / sample_size)
 
@@ -154,10 +151,9 @@ class Naive_denoising(object):
 				acc_counter += 1
 			else: 
 				u_samples.append(u_current)
-				notacc_counter += 1
 
-		print("Accept:" + str(acc_counter) + ", reject:" + str(notacc_counter))
-		self.Posterior_Mean = u_mean / sample_size
+		print("Accept:" + str(acc_counter / sample_size))
+		self.Posterior_Mean = u_mean / sample_size 
 		self.Plot_CM(sample_size, beta)
 		return u_samples
 
@@ -165,8 +161,7 @@ class Naive_denoising(object):
 		u_samples = list()
 		u_samples.append(self.observation)
 		u_mean = np.zeros(self.dimension_of_observation)
-		acc_counter = 0
-		notacc_counter = 0
+		acc_counter = 0.0
 
 		for i in range(sample_size):
 			u_mean += u_samples[-1]
@@ -189,9 +184,8 @@ class Naive_denoising(object):
 				acc_counter += 1
 			else: 
 				u_samples.append(u_current)
-				notacc_counter +=1
 
-		print("Accept:" + str(acc_counter) + ", reject:" + str(notacc_counter))
+		print("Accept:" + str(acc_counter / sample_size))
 		self.Posterior_Mean = u_mean / sample_size
 		self.Plot_CM(sample_size, beta)
 		return u_samples
@@ -222,15 +216,15 @@ class Naive_denoising(object):
 
 	def Plot_CM(self, sample_size, beta):
 		if (self.Prior == "TV"): 
-			legend_text = "Sample size = "+str(sample_size)+"\nbeta = "+str(beta)+"\nLambda = "+str(self.Lambda)
+			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\nLambda="+str(self.Lambda)
 		elif (self.Prior == "Gaussian"):
-			legend_text = "Sample size = "+str(sample_size)+"\nbeta = "+str(beta)+"\ngamma = "+str(self.gamma)+"\nd = "+str(self.d)
+			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\ngamma="+str(self.gamma)+"\nd="+str(self.d)
 		elif (self.Prior == "TG"):
-			legend_text = "Sample size = "+str(sample_size)+"\nbeta = "+str(beta)+"\nLambda = "+str(self.Lambda)+"\ngamma = "+str(self.gamma)+"\nd = "+str(self.d)
+			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\nLambda="+str(self.Lambda)+"\ngamma="+str(self.gamma)+"\nd="+str(self.d)
 		elif (self.Prior == "pV"):
-			legend_text = "Sample size = "+str(sample_size)+"\nbeta = "+str(beta)+"\nLambda = "+str(self.Lambda)+"\np = "+str(self.p)
+			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\nLambda="+str(self.Lambda)+"\np="+str(self.p)
 
-		if (self.show_observation): plt.plot(self.x_ordinate, self.observation)
+		if (self.show_observation): plt.plot(self.x_ordinate, self.observation, 'r')
 		plt.plot(self.x_ordinate, self.Posterior_Mean, label = legend_text)
 		plt.legend()
 		plt.title(self.Prior + " Prior Posterior Mean")
@@ -270,14 +264,25 @@ if __name__ == '__main__':
 	# Sample_example.Set_Prior("TV", Lambda = 50)
 	# Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.01)
 
-	Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.001, show_observation = False, show_figure = True, save_figure = False)
+	# Sample_example = Naive_denoising(dimension_of_observation = 353, noise_variance = 0.01, show_observation = True, show_figure = True, save_figure = False)
 	# Sample_example.Set_Prior(prior = "TV", Lambda = 50)
-	# Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.01)
-	Sample_example.Set_Prior(prior = "Gaussian", gamma = 0.1, d = 0.2)
-	Sample_example.pCN(sample_size = 10000, beta = 0.003)
+	# Sample_example.Metropolis_Hastings(sample_size = 1000000, beta = 0.01)
+	# Sample_example.Set_Prior(prior = "Gaussian", gamma = 0.1, d = 0.2)
+	# Sample_example.pCN(sample_size = 5000000, beta = 0.003)
 	# Sample_example.Set_Prior(prior = "TG", Lambda = 50, gamma = 0.1, d = 0.04)
-	# Sample_example.pCN(sample_size = 1000, beta = 0.01)
+	# Sample_example.pCN(sample_size = 5000000, beta = 0.003)
 	# Sample_example.Set_Prior(prior = "TG", Lambda = 50, gamma = 0.1, d = 0.04)
 	# Sample_example.S_pCN(sample_size = 1000, splitting_number = 5, beta = 0.01)
-	# Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.5)
-	# Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.03)
+	# Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.1)
+	# Sample_example.Metropolis_Hastings(sample_size = 1000000, beta = 0.03)
+
+	Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.01, show_observation = False, show_figure = False, save_figure = False)
+	Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.5)
+	Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.03)
+	Sample_example = Naive_denoising(dimension_of_observation = 177, noise_variance = 0.01, show_observation = False, show_figure = False, save_figure = False)
+	Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.5)
+	Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.03)
+	Sample_example = Naive_denoising(dimension_of_observation = 353, noise_variance = 0.01, show_observation = False, show_figure = False, save_figure = False)
+	Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.5)
+	Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.01)
+
