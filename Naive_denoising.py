@@ -41,7 +41,7 @@ class Naive_denoising(object):
 		# gamma and d: parameters of Gaussian kernel
 		self.Prior = prior
 
-		if (prior == "TV"):
+		if (prior == "TV") or (prior == "phi_Laplace"):
 			self.Lambda = Lambda
 		elif (prior == "Gaussian"):
 			self.gamma = gamma
@@ -57,8 +57,6 @@ class Naive_denoising(object):
 		elif (prior == "pV"):
 			self.Lambda = Lambda
 			self.p = p
-		elif (prior == "phi_Laplace"):
-			self.Lambda = Lambda
 
 	# Definitions of the norms and the potential function.
 	def Phi(self, u): 
@@ -189,6 +187,8 @@ class Naive_denoising(object):
 				acceptance_rate_I = min(1, e ** (self.TG_minimizer(u_current) - self.TG_minimizer(u_prop)))
 			elif (self.Prior == "pV"):
 				acceptance_rate_I = min(1, e ** (self.pV_minimizer(u_current) - self.pV_minimizer(u_prop)))
+			elif (self.Prior == "phi_Laplace"):
+				acceptance_rate_I = min(1, e ** (self.phi_minimizer(u_current) - self.phi_minimizer(u_prop)))
 			if random.uniform(0, 1) < acceptance_rate_I: 
 				u_samples.append(u_prop)
 				acc_counter += 1
@@ -219,7 +219,7 @@ class Naive_denoising(object):
 		elif (self.Prior == "pV"):
 			legend_text = "Lambda = "+str(self.Lambda)+"\np = "+str(self.p) 
 
-		if (self.show_observation): plt.plot(self.x_ordinate, self.observation, 'x')
+		if (self.show_observation): plt.plot(self.x_ordinate, self.observation, 'r')
 		plt.plot(self.x_ordinate, self.MAP, label = legend_text)
 		plt.legend()
 		plt.title(self.Prior + " Prior MAP")
@@ -229,7 +229,7 @@ class Naive_denoising(object):
 		plt.close('all')
 
 	def Plot_CM(self, sample_size, beta):
-		if (self.Prior == "TV"): 
+		if (self.Prior == "TV") or (self.Prior == "phi_Laplace"): 
 			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\nLambda="+str(self.Lambda)
 		elif (self.Prior == "Gaussian"):
 			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\ngamma="+str(self.gamma)+"\nd="+str(self.d)
@@ -238,7 +238,7 @@ class Naive_denoising(object):
 		elif (self.Prior == "pV"):
 			legend_text = "Sp="+str(sample_size)+"\nbeta="+str(beta)+"\nLambda="+str(self.Lambda)+"\np="+str(self.p)
 
-		if (self.show_observation): plt.plot(self.x_ordinate, self.observation, 'x')
+		if (self.show_observation): plt.plot(self.x_ordinate, self.observation, 'r')
 		plt.plot(self.x_ordinate, self.Posterior_Mean, label = legend_text)
 		plt.legend()
 		plt.title(self.Prior + " Prior Posterior Mean")
@@ -252,7 +252,7 @@ if __name__ == '__main__':
 	"""
 	Maximum A Posterior Experiments with different priors.
 	"""
-	# Denoising_example = Naive_denoising(dimension_of_observation = 23, noise_variance = 0.01, show_observation = True, show_figure = False, save_figure = True)
+	Denoising_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.02, show_observation = True, show_figure = True, save_figure = False)
 	# Denoising_example.Plot_observation()
 	# Denoising_example.Set_Prior(prior = "pV", Lambda = 0.4, p = 2)
 	# Denoising_example.Get_MAP()
@@ -263,6 +263,8 @@ if __name__ == '__main__':
 	# Denoising_example.Set_Prior(prior = "pV", Lambda = 10, p = 1)
 	# Denoising_example.Get_MAP()
 	# Denoising_example.Metropolis_Hastings(sample_size = 100000, beta = 0.2)
+
+
 	# Denoising_example.Set_Prior(prior = "TV", Lambda = 50)
 	# Denoising_example.Get_MAP()
 	# Denoising_example.Set_Prior(prior = "Gaussian", gamma = 0.1, d = 0.04)
@@ -275,25 +277,30 @@ if __name__ == '__main__':
 	# Denoising_example.Get_MAP()
 	# Denoising_example.Set_Prior(prior = "TV", Lambda = 60)
 	# Denoising_example.Get_MAP()
+
+
+
 	# for d in np.linspace(0.04, 0.4, 10):
 	# 	Denoising_example.Set_Prior(prior = "Gaussian", gamma = 0.1, d = d)
 	# 	Denoising_example.Get_MAP()
-	# Denoising_example.Set_Prior(prior = "phi_Laplace", Lambda = 10000)
+	# Denoising_example.Set_Prior(prior = "phi_Laplace", Lambda = 10**8)
 	# Denoising_example.Get_MAP()
 
 	"""
-
+	MCMC
 	"""
 	# Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.001, show_observation = False, show_figure = True, save_figure = False)
 	# Sample_example.Set_Prior("TG", Lambda = 50, gamma = 1, d = 0.04)
-	# Sample_example.S_pCN(sample_size = 10, splitting_number = 5, beta = 0.1)
+	# Sample_example.S_pCN(sample_size = 1000, splitting_number = 5, beta = 0.1)
 	# Sample_example.Set_Prior("TV", Lambda = 50)
 	# Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.01)
 
 
-	# Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.01, show_observation = True, show_figure = True, save_figure = False)
-	# Sample_example.Set_Prior(prior = "TV", Lambda = 50)
-	# Sample_example.Metropolis_Hastings(sample_size = 1000000, beta = 0.03)
+	Sample_example = Naive_denoising(dimension_of_observation = 89, noise_variance = 0.01, show_observation = False, show_figure = False, save_figure = False)
+	# Sample_example.Set_Prior(prior = "phi_Laplace", Lambda = 1000)
+	# Sample_example.Metropolis_Hastings(sample_size = 1000000, beta = 0.0005)
+	Sample_example.Set_Prior(prior = "TV", Lambda = 1000)
+	Sample_example.Metropolis_Hastings(sample_size = 10000, beta = 0.002)
 	# Sample_example.Set_Prior(prior = "Gaussian", gamma = 0.1, d = 0.2)
 	# Sample_example.pCN(sample_size = 3000000, beta = 0.05)
 	# Sample_example.Set_Prior(prior = "TG", Lambda = 50, gamma = 0.1, d = 0.04)
@@ -306,6 +313,8 @@ if __name__ == '__main__':
 	# Sample_example.pCN(sample_size = 2000000, beta = 0.015)
 	# Sample_example.Set_Prior(prior = "TG", Lambda = 50, gamma = 0.1, d = 0.005)
 	# Sample_example.pCN(sample_size = 2000000, beta = 0.01)
+
+
 	# Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.5)
 	# Sample_example.Metropolis_Hastings(sample_size = 5000000, beta = 0.07)
 	# Sample_example.Set_Prior(prior = "pV", Lambda = 60, p = 0.5)
@@ -318,6 +327,7 @@ if __name__ == '__main__':
 	# Sample_example.Metropolis_Hastings(sample_size = 5000000, beta = 0.03)
 	# Sample_example.Set_Prior(prior = "pV", Lambda = 100, p = 0.5)
 	# Sample_example.Metropolis_Hastings(sample_size = 5000, beta = 0.03)
+
 
 	# Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.9)
 	# Sample_example.Metropolis_Hastings(sample_size = 10000, beta = 0.035)
