@@ -340,7 +340,6 @@ if __name__ == '__main__':
 	# Sample_example.Set_Prior(prior = "pV", Lambda = 50, p = 0.5)
 	# Sample_example.Metropolis_Hastings(sample_size = 100000, beta = 0.07)
 
-
 	"""
 	prior = pV, Posterior Mean with different dimensions.
 	"""
