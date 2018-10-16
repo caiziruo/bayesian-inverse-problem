@@ -62,18 +62,26 @@ class Naive_denoising(object):
 
 		if (prior == "TV") or (prior == "phi_Laplace"):
 			self.Lambda = Lambda
+			self.p = 0
+			self.gamma = 0
+			self.d = 0
 		elif (prior == "pV"):
 			self.Lambda = Lambda
 			self.p = p
+			self.gamma = 0
+			self.d = 0
 		elif (prior == "Gaussian"):
 			self.gamma = gamma
 			self.d = d
+			self.Lambda = 0
+			self.p = 0
 			self.prior_covariance = Gaussian_Kernel(self.unknown_ordinate[np.newaxis, :], self.unknown_ordinate[:, np.newaxis], self.gamma, self.d)
 			self.inv_sqrt_prior_covariance = LA.inv(np.sqrt(self.prior_covariance))
 		elif (prior == "TG") or (prior == "phi_G"):
 			self.Lambda = Lambda
 			self.gamma = gamma
 			self.d = d
+			self.p = 0
 			self.prior_covariance = Gaussian_Kernel(self.unknown_ordinate[np.newaxis, :], self.unknown_ordinate[:, np.newaxis], self.gamma, self.d)
 			self.inv_sqrt_prior_covariance = LA.inv(np.sqrt(self.prior_covariance))
 		elif (prior == "pG"):
@@ -185,7 +193,7 @@ class Naive_denoising(object):
 		self.Plot_CM(sample_size, beta)
 		return u_samples
 
-	def Metropolis_Hastings(self, sample_size = 1000, beta = 0.1):
+	def Metropolis_Hastings(self, sample_size = 1000, beta = 0.1, save_npy = False):
 		u_samples = list()
 		u_samples.append(self.unknown)
 		u_mean = np.zeros(self.dimension_of_unknown)
@@ -197,7 +205,7 @@ class Naive_denoising(object):
 
 			if i > 0 and i % (sample_size / 10) == 0:
 				self.Posterior_Mean = u_mean / len(u_samples)
-				# self.Plot_CM(len(u_samples) - 1, beta)
+				# self.Plot_CM(len(u_samples) - 1, beta) 
 
 			u_current = u_samples[-1]
 			random_walk = np.random.multivariate_normal(np.zeros(self.dimension_of_unknown), 
@@ -222,6 +230,25 @@ class Naive_denoising(object):
 		print("Accept:" + str(acc_counter / sample_size))
 		self.Posterior_Mean = u_mean / sample_size
 		self.Plot_CM(sample_size, beta)
+		if (save_npy): 
+			samples_np = np.array(u_samples) 
+			np.save(self.Prior +
+			"_time_"+ datetime.now().strftime("%H%M%S.%f") +
+			".npy", samples_np)
+			np.save("Observation_time_" + datetime.now().strftime("%H%M%S.%f") + 
+			".npy", self.observation)
+			text_file = open(self.Prior +
+			"_time_"+ datetime.now().strftime("%H%M%S.%f") +
+			".txt", "w")
+			# samples_np_informations = 
+			text_file.write("Lambda = " + str(self.Lambda) + 
+			"\np = " + str(self.p) + 
+			"\ngamma = " + str(self.gamma) +
+			"\nd = " + str(self.d)+
+			"\nsample size = " + str(sample_size) +
+			"\nsample step = " + str(beta)
+			)
+
 		return u_samples
 
 	def Plot_observation(self):
@@ -270,33 +297,39 @@ class Naive_denoising(object):
 		if (self.save_figure): plt.savefig('CM_'+ self.Prior +datetime.now().strftime("_%H%M%S.%f")+'.pdf')
 		plt.close('all')
 
+def Plot_CM_from_npy(npy_name, Observation_npy, Prior, Lambda, p, gamma, d, show_observation = False, show_figure = False, save_figure = False):
+	samples_np = np.load(npy_name)
+	dimension_of_unknown = samples_np.shape[1]
+	unknown_ordinate = np.linspace(0, 1, dimension_of_unknown)
+
+	npy_mean = np.mean(samples_np, axis=0)
+	sample_size = samples_np.shape[0] - 1
+
+
+	if (Prior == "TV") or (Prior == "phi_Laplace"): legend_text = "Lambda="+str(Lambda)
+	elif (Prior == "Gaussian"): legend_text = "gamma="+str(gamma)+"\nd="+str(d)
+	elif (Prior == "TG"): legend_text = "Lambda="+str(Lambda)+"\ngamma="+str(gamma)+"\nd="+str(d)
+	elif (Prior == "pV"): legend_text = "Lambda="+str(Lambda)+"\np="+str(p)
+
+	if (show_observation): 
+		observation = np.load(Observation_npy)
+		dimension_of_observation = observation.shape[0]
+		observation_ordinate = np.linspace(0, 1, dimension_of_observation)
+		plt.plot(observation_ordinate, observation, 'x', label = "observation")
+	plt.plot(unknown_ordinate, npy_mean, label = legend_text)
+	plt.legend()
+	plt.title(Prior + " Prior Posterior Mean")
+	if (save_figure): plt.savefig('CM_'+ Prior +datetime.now().strftime("_%H%M%S.%f")+'.pdf')
+	if (show_figure): plt.show()
+	plt.close('all')
+
 
 ###########################################################################################################
 if __name__ == '__main__':
-	"""
-	Maximum A Posterior Experiments with different priors.
-	"""
-	# Denoising_example = Naive_denoising(dimension_of_observation = 4, dimension_of_unknown = 10, noise_variance = 0.02, show_observation = True, show_figure = True, save_figure = False)
-	# Denoising_example.Plot_observation()
-	# Denoising_example.Set_Prior(prior = "pV", Lambda = 0.4, p = 2)
-	# Denoising_example.Get_MAP()
-	# Denoising_example.Metropolis_Hastings(sample_size = 100000, beta = 0.3)
-	# Denoising_example.Set_Prior(prior = "pV", Lambda = 2, p = 1.5)
-	# Denoising_example.Get_MAP()
-	# Denoising_example.Metropolis_Hastings(sample_size = 100000, beta = 0.3)
-	# Denoising_example.Set_Prior(prior = "pV", Lambda = 10, p = 1)
-	# Denoising_example.Get_MAP()
-	# Denoising_example.Metropolis_Hastings(sample_size = 100000, beta = 0.2)
-
-
 	Sample_example = Naive_denoising(dimension_of_observation = 15, dimension_of_unknown = 43, noise_variance = 0.01, show_observation = True, show_figure = True, save_figure = False)
 	# Sample_example.Plot_observation()
 	Sample_example.Set_Prior(prior = "phi_Laplace", Lambda = 100)
-	Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.0005)
-	# Sample_example.Set_Prior(prior = "TV", Lambda = 1000)
-	# Sample_example.Metropolis_Hastings(sample_size = 1000, beta = 0.002)
-	# Sample_example.Set_Prior(prior = "Gaussian", Lambda = 1, p = 1, gamma = 0.1, d = 0.04)
-
+	# Sample_example.Metropolis_Hastings(sample_size = 10000, beta = 0.0005, save_npy = True)
 
 	
-	
+	Plot_CM_from_npy(npy_name = "phi_Laplace_time_165601.850129.npy",  Observation_npy = "Observation_time_165601.858085.npy", Prior = "phi_Laplace", Lambda = 100, p = 0, gamma = 0, d = 0, show_observation = True, show_figure = True, save_figure = False)
